@@ -398,9 +398,149 @@ INSERT INTO USER_USED_PK2 VALUES
 
 ------------------------------------------------------------------
 
+-- 4. FOREIGN KEY(외래키/외부키) 제약조건
+
+-- 참조(REFERENCES)된 다른 테이블의 컬럼이 제공하는 값만 사용할 수 있음
+-- FOREIGN KEY 제약조건에 의해서 테이블간의 관계가 형성됨
+-- 제공되는 값 외에는 NULL 을 사용할 수 있음.
+
+-- 컬럼레벨일 경우
+-- 컬럼명 자료형(크기) [CONSTRAINT 이름] 
+-- REFERENCES 참조할테이블명 [(참조할컬럼명)] [삭제룰]
+
+-- 테이블레벨일 경우
+-- [CONSTRAINT 이름] FOREIGN KEY (적용할컬럼명) 
+-- REFERENCES 참조할테이블명 [(참조할컬럼명)] [삭제룰]
+
+-- * 참조될 수 있는 컬럼은 PRIMARY KEY컬럼과, 
+-- UNIQUE 지정된 컬럼만 외래키로 사용 가능.
+
+-- * 참조할 테이블의 참조할 컬럼명이 생략되면, PRIMARY KEY로 설정된 컬럼이
+-- 자동 참조할 컬럼이 됨.
+
+-- 부모테이블 / 참조할 테이블 / 레퍼런스 테이블 (대상이 되는 테이블)
+CREATE TABLE USER_GRADE(
+	GRADE_CODE NUMBER PRIMARY KEY, -- 등급 고유식별 번호
+	GRADE_NAME VARCHAR2(30) NOT NULL -- 등급 명칭
+);
+
+INSERT INTO USER_GRADE VALUES(10, '일반회원');
+INSERT INTO USER_GRADE VALUES(20, '우수회원');
+INSERT INTO USER_GRADE VALUES(30, '특별회원');
+
+SELECT * FROM USER_GRADE;
+
+
+-- 자식 테이블 (USER_GRADE 테이블을 참조하여 사용할 테이블)
+CREATE TABLE USER_USED_FK(
+	USER_NO NUMBER PRIMARY KEY, -- 사용자번호(고유한 번호 : 중복 X / NULL X)
+	USER_ID VARCHAR2(20) UNIQUE, -- 사용자 아이디(중복 X)
+	USER_PWD VARCHAR2(20) NOT NULL, -- 사용자 비밀번호(NULL X)
+	USER_NAME VARCHAR2(30),
+	GENDER VARCHAR2(10),
+	PHONE VARCHAR2(20),
+	EMAIL VARCHAR2(50), 
+	GRADE_CODE NUMBER CONSTRAINT GRADE_CODE_FK REFERENCES USER_GRADE /*(GRADE_CODE)*/ -- 컬럼레벨 
+								-- 컬럼명 미작성 시 USER_GRADE 테이블의 PK를 자동 참조
+	-- 테이블레벨
+	-- , CONSTRAINT GRADE_CODE_FK FOREIGN KEY(GRADE_CODE) REFERENCES USER_GRADE /*(GRADE_CODE)*/
+	--> FOREIGN KEY 명령어는 테이블 레벨에서만 사용!
+);
+
+
+INSERT INTO USER_USED_FK VALUES
+(1, 'USER01', 'PASS01', '홍길동', 
+'남자', '010-1234-5678', 'hong@kr.or.kr', 10);
+-- USER_GRADE(부모테이블/참조테이블)에 10이라는 GRADE_CODE가 존재하므로
+-- 자식테이블이 10이라는 값 사용 가능.
+
+INSERT INTO USER_USED_FK VALUES
+(2, 'USER02', 'PASS02', '이순신', 
+'남자', '010-3333-4444', 'lee@kr.or.kr', 10);
+-- USER_GRADE(부모테이블/참조테이블)에 10이라는 GRADE_CODE가 존재하므로
+-- 자식테이블이 10이라는 값 사용 가능.
+
+INSERT INTO USER_USED_FK VALUES
+(3, 'USER03', 'PASS03', '유관순', 
+'여자', '010-3333-1111', 'yoo@kr.or.kr', 30);
+-- USER_GRADE(부모테이블/참조테이블)에 30이라는 GRADE_CODE가 존재하므로
+-- 자식테이블이 30이라는 값 사용 가능.
+
+INSERT INTO USER_USED_FK VALUES
+(4, 'USER04', 'PASS04', '안중근', 
+'남자', '010-2222-1111', 'ahn@kr.or.kr', NULL);
+--> NULL 사용 가능
+
+INSERT INTO USER_USED_FK VALUES
+(5, 'USER05', 'PASS05', '윤봉길', 
+'남자', '010-6666-7777', 'yoon@kr.or.kr', 50);
+-- ORA-02291: 무결성 제약조건(KH_CMH.GRADE_CODE_FK)이 위배되었습니다- 부모 키가 없습니다
+--> 외래키 제약조건에 위배되어 오류 발생(부모의 GRADE_CODE 에는 50 값 없음)
+
+
+------------------------------------------------------
+
+-- * FOREIGN KEY 삭제 옵션
+-- 부모 테이블의 데이터 삭제 시 자식 테이블의 데이터를
+-- 어떤 식으로 처리할지에 대한 내용을 설정할 수 있다.
+
+-- 1) ON DELETE RESTRICTED(삭제 제한)로 기본 지정되어 있음.
+-- FOREIGN KEY로 지정된 컬럼에서 사용되고 있는 값일 경우
+-- 제공하는 컬럼의 값은 삭제하지 못함
+
+DELETE FROM USER_GRADE WHERE GRADE_CODE = 30;
+-- ORA-02292: 무결성 제약조건(KH_CMH.GRADE_CODE_FK)이 위배되었습니다- 자식 레코드가 발견되었습니다
+
+DELETE FROM USER_GRADE WHERE GRADE_CODE = 20;
+-- GRADE_CODE 중 20은 외래키로 참조되고 있지 않으므로 삭제가 가능함.
+SELECT * FROM USER_GRADE;
+ROLLBACK; 
 
 
 
+-- 2) ON DELETE SET NULL : 부모키 삭제 시 자식키를 NULL로 변경하는 옵션
+
+CREATE TABLE USER_GRADE2(
+	GRADE_CODE NUMBER PRIMARY KEY, -- 등급 고유식별 번호
+	GRADE_NAME VARCHAR2(30) NOT NULL -- 등급 명칭
+);
+
+INSERT INTO USER_GRADE2 VALUES(10, '일반회원');
+INSERT INTO USER_GRADE2 VALUES(20, '우수회원');
+INSERT INTO USER_GRADE2 VALUES(30, '특별회원');
+
+SELECT * FROM USER_GRADE2;
+
+
+CREATE TABLE USER_USED_FK2(
+	USER_NO NUMBER PRIMARY KEY, -- 사용자번호(고유한 번호 : 중복 X / NULL X)
+	USER_ID VARCHAR2(20) UNIQUE, -- 사용자 아이디(중복 X)
+	USER_PWD VARCHAR2(20) NOT NULL, -- 사용자 비밀번호(NULL X)
+	USER_NAME VARCHAR2(30),
+	GENDER VARCHAR2(10),
+	PHONE VARCHAR2(20),
+	EMAIL VARCHAR2(50), 
+	GRADE_CODE NUMBER CONSTRAINT 
+	GRADE_CODE_FK2 REFERENCES USER_GRADE2 ON DELETE SET NULL 
+										/* 삭제 옵션 */
+);
+
+
+INSERT INTO USER_USED_FK2 VALUES
+(1, 'USER01', 'PASS01', '홍길동', 
+'남자', '010-1234-5678', 'hong@kr.or.kr', 10);
+
+INSERT INTO USER_USED_FK2 VALUES
+(2, 'USER02', 'PASS02', '이순신', 
+'남자', '010-3333-4444', 'lee@kr.or.kr', 10);
+
+INSERT INTO USER_USED_FK2 VALUES
+(3, 'USER03', 'PASS03', '유관순', 
+'여자', '010-3333-1111', 'yoo@kr.or.kr', 30);
+
+INSERT INTO USER_USED_FK2 VALUES
+(4, 'USER04', 'PASS04', '안중근', 
+'남자', '010-2222-1111', 'ahn@kr.or.kr', NULL);
 
 
 
