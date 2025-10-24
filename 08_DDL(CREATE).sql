@@ -162,6 +162,244 @@ SELECT * FROM MEMBER2;
 -- 0으로 시작할 가능성이 있으면 
 -- CHAR, VARCHAR2 같은 문자형 이용해야함 !!!
 
+-----------------------------------------------------------------
+
+-- 제약 조건 (CONSTRAINTS)
+
+/*
+ * 사용자가 원하는 조건의 데이터만 유지하기 위해서 
+ * 특정 컬럼에 설정하는 제약.
+ * -> 중복 데이터 X
+ * 
+ * 입력 데이터에 문제가 없는지 자동으로 검사하는 목적
+ * 데이터의 수정/삭제 가능 여부 검사하는 목적으로 함.
+ * --> 제약조건을 위배하는 DML구문은 수행할 수 없다.
+ * 
+ * 제약조건 종류
+ * PRIMARY KEY, NOT NULL, UNIQUE, CHECK, FOREIGN KEY
+ * 
+ * */
+
+
+-- 1. NOT NULL
+-- 해당 컬럼에 반드시 값이 기록되어야 하는 경우 사용
+-- 삽입/수정 시 NULL 값을 허용하지 않도록 컬럼레벨에서 제한
+
+-- * 컬럼레벨 : 테이블 생성 시 컬럼을 정의하는 부분에 작성하는 것
+
+CREATE TABLE USER_USED_NN(
+	USER_NO NUMBER NOT NULL, -- 사용자 번호(모든 사용자는 사용자번호가 있어야한다)
+	USER_ID VARCHAR2(20),
+	USER_PWD VARCHAR2(20),
+	USER_NAME VARCHAR2(30),
+	GENDER VARCHAR2(10),
+	PHONE VARCHAR2(20),
+	EMAIL VARCHAR2(50) -- 마지막 컬럼 작성 부분까지 컬럼 레벨
+	-- 테이블 레벨
+);
+
+
+INSERT INTO USER_USED_NN VALUES
+(1, 'USER01', 'PASS01', '홍길동', 
+'남자', '010-1234-5678', 'hong@kr.or.kr');
+
+INSERT INTO USER_USED_NN VALUES
+(NULL, 'USER01', 'PASS01', '홍길동', 
+'남자', '010-1234-5678', 'hong@kr.or.kr');
+-- ORA-01400: NULL을 ("KH_CMH"."USER_USED_NN"."USER_NO") 안에 삽입할 수 없습니다
+
+--> NOT NULL 제약조건 위배되어 오류발생!
+
+SELECT * FROM USER_USED_NN;
+
+----------------------------------------------------------
+
+-- 2. UNIQUE 제약조건
+-- 컬럼에 입력값에 대해서 중복을 제한하는 제약조건
+-- 컬럼레벨에서 설정 가능, 테이블레벨에서 설정 가능
+-- 단, UNIQUE 제약조건이 설정된 컬럼에 NULL 값은 중복 삽입 가능.
+
+-- * 테이블 레벨 : 테이블 생성 시 컬럼 정의가 끝난 후 마지막에 작성
+
+-- * 제약조건 지정 방법
+-- 1) 컬럼 레벨 : [CONSTRAINT 제약조건명] 제약조건
+-- 2) 테이블 레벨 : [CONSTRAINT 제약조건명] 제약조건(컬럼명)
+
+-- UNIQUE 제약조건 테이블 생성
+CREATE TABLE USER_USED_UK(
+	USER_NO NUMBER NOT NULL,
+	-- USER_ID VARCHAR2(20) UNIQUE, -- 컬럼레벨(제약조건명 미지정)
+	-- USER_ID VARCHAR2(20) CONSTRAINT USER_ID_U UNIQUE, -- 컬럼레벨(제약조건명 지정)
+	USER_ID VARCHAR2(20), -- UNIQUE 제약조건 설정된 컬럼(회원 아이디)
+	USER_PWD VARCHAR2(20),
+	USER_NAME VARCHAR2(30),
+	GENDER VARCHAR2(10),
+	PHONE VARCHAR2(20),
+	EMAIL VARCHAR2(50),
+	-- 테이블 레벨
+	-- UNIQUE(USER_ID) -- 테이블레벨(제약조건명 미지정)
+	CONSTRAINT USER_ID_U UNIQUE(USER_ID) -- 테이블레벨(제약조건명 지정)
+);
+
+
+INSERT INTO USER_USED_UK VALUES
+(1, 'USER01', 'PASS01', '홍길동', 
+'남자', '010-1234-5678', 'hong@kr.or.kr');
+
+INSERT INTO USER_USED_UK VALUES
+(1, 'USER01', 'PASS01', '홍길동', 
+'남자', '010-1234-5678', 'hong@kr.or.kr');
+-- ORA-00001: 무결성 제약 조건(KH_CMH.USER_ID_U)에 위배됩니다
+
+
+INSERT INTO USER_USED_UK VALUES
+(1, NULL, 'PASS01', '홍길동', 
+'남자', '010-1234-5678', 'hong@kr.or.kr');
+--> 아이디에 NULL 값 삽입 가능 확인(UNIQUE 제약조건 있어도 NULL 값 허용)
+
+INSERT INTO USER_USED_UK VALUES
+(1, NULL, 'PASS01', '홍길동', 
+'남자', '010-1234-5678', 'hong@kr.or.kr');
+--> 아이디에 NULL 값 중복 삽입 가능 확인(UNIQUE 제약조건은 NULL 값은 중복 허용)
+
+
+----------------------------------------------
+
+-- UNIQUE 복합키 
+-- 두 개 이상의 컬럼을 묶어서 하나의 UNIQUE 제약조건을 설정함
+
+-- * 복합키 지정은 테이블 레벨만 가능하다! *
+-- * 복합키는 지정된 모든 컬럼의 값이 같을 때 위배된다 ! *
+
+CREATE TABLE USER_USED_UK2(
+	USER_NO NUMBER NOT NULL,
+	USER_ID VARCHAR2(20),
+	USER_PWD VARCHAR2(20),
+	USER_NAME VARCHAR2(30),
+	GENDER VARCHAR2(10),
+	PHONE VARCHAR2(20),
+	EMAIL VARCHAR2(50),
+	-- 테이블 레벨 UNIQUE 복합키 지정
+	CONSTRAINT USER_ID_NAME_U UNIQUE(USER_ID, USER_NAME)
+);
+
+
+INSERT INTO USER_USED_UK2 VALUES
+(1, 'USER01', 'PASS01', '홍길동', 
+'남자', '010-1234-5678', 'hong@kr.or.kr');
+
+INSERT INTO USER_USED_UK2 VALUES
+(1, 'USER02', 'PASS01', '홍길동', 
+'남자', '010-1234-5678', 'hong@kr.or.kr');
+
+INSERT INTO USER_USED_UK2 VALUES
+(1, 'USER02', 'PASS01', '고길동', 
+'남자', '010-1234-5678', 'hong@kr.or.kr');
+
+INSERT INTO USER_USED_UK2 VALUES
+(1, 'USER02', 'PASS01', '고길동', 
+'남자', '010-1234-5678', 'hong@kr.or.kr');
+-- ORA-00001: 무결성 제약 조건(KH_CMH.USER_ID_NAME_U)에 위배됩니다
+--> 복합키로 지정된 컬럼값 중 하나라도 다르면 위배되지 않음
+--> 모든 컬럼의 값이 중복되면 위배된다!
+
+
+-----------------------------------------------------------------
+
+-- 3. PRIMARY KEY (기본키) 제약조건
+-- 테이블에서 한 행의 정보를 찾기 위해 사용할 컬럼을 의미함.
+-- 테이블에 대한 식별자(회원 번호, 학번..) 역할을 함
+
+-- NOT NULL + UNIQUE 제약조건의 의미 -> 중복되지 않는 값이 필수로 존재해야함.
+
+-- 한 테이블당 한 개 설정할 수 있음
+-- 컬럼레벨, 테이블레벨 둘 다 설정 가능
+-- 한 개 컬럼에 설정할 수 있고, 복합키로 설정가능 (PRIMARY 복합키)
+
+CREATE TABLE USER_USED_PK(
+	USER_NO NUMBER CONSTRAINT USER_NO_PK PRIMARY KEY, -- 컬럼 레벨(제약조건명 지정)
+	USER_ID VARCHAR2(20),
+	USER_PWD VARCHAR2(20),
+	USER_NAME VARCHAR2(30),
+	GENDER VARCHAR2(10),
+	PHONE VARCHAR2(20),
+	EMAIL VARCHAR2(50)
+	-- 테이블 레벨
+	-- , CONSTRAINT USER_NO_PK PRIMARY KEY(USER_NO)
+);
+
+INSERT INTO USER_USED_PK VALUES
+(1, 'USER01', 'PASS01', '홍길동', 
+'남자', '010-1234-5678', 'hong@kr.or.kr');
+
+INSERT INTO USER_USED_PK VALUES
+(1, 'USER02', 'PASS02', '이순신', 
+'남자', '010-2222-3333', 'lee@kr.or.kr');
+-- ORA-00001: 무결성 제약 조건(KH_CMH.USER_NO_PK)에 위배됩니다
+--> 기본키 중복 오류!
+
+INSERT INTO USER_USED_PK VALUES
+(NULL, 'USER02', 'PASS02', '이순신', 
+'남자', '010-2222-3333', 'lee@kr.or.kr');
+-- ORA-01400: NULL을 ("KH_CMH"."USER_USED_PK"."USER_NO") 안에 삽입할 수 없습니다
+--> 기본키 NULL 이므로 오류!
+
+INSERT INTO USER_USED_PK VALUES
+(2, 'USER02', 'PASS02', '이순신', 
+'남자', '010-2222-3333', 'lee@kr.or.kr');
+-- 삽입 가능!
+
+---------------------------------------------------
+
+-- PRIMARY KEY 복합키 (테이블 레벨만 가능)
+CREATE TABLE USER_USED_PK2(
+	USER_NO NUMBER,
+	USER_ID VARCHAR2(20),
+	USER_PWD VARCHAR2(20),
+	USER_NAME VARCHAR2(30),
+	GENDER VARCHAR2(10),
+	PHONE VARCHAR2(20),
+	EMAIL VARCHAR2(50)
+	-- 테이블 레벨
+	, CONSTRAINT PK_USERNO_USERID PRIMARY KEY(USER_NO, USER_ID)
+);
+
+
+INSERT INTO USER_USED_PK2 VALUES
+(1, 'USER01', 'PASS01', '홍길동', 
+'남자', '010-1234-5678', 'hong@kr.or.kr');
+
+INSERT INTO USER_USED_PK2 VALUES
+(1, 'USER02', 'PASS01', '홍길동', 
+'남자', '010-1234-5678', 'hong@kr.or.kr');
+
+INSERT INTO USER_USED_PK2 VALUES
+(2, 'USER02', 'PASS01', '홍길동', 
+'남자', '010-1234-5678', 'hong@kr.or.kr');
+
+INSERT INTO USER_USED_PK2 VALUES
+(2, 'USER02', 'PASS01', '홍길동', 
+'남자', '010-1234-5678', 'hong@kr.or.kr');
+-- ORA-00001: 무결성 제약 조건(KH_CMH.PK_USERNO_USERID)에 위배됩니다
+-- > USER_NO, USER_ID 둘 다 중복되었을 때만 제약조건 위배!
+
+
+INSERT INTO USER_USED_PK2 VALUES
+(NULL, 'USER02', 'PASS01', '홍길동', 
+'남자', '010-1234-5678', 'hong@kr.or.kr');
+-- ORA-01400: NULL을 ("KH_CMH"."USER_USED_PK2"."USER_NO") 안에 삽입할 수 없습니다
+
+INSERT INTO USER_USED_PK2 VALUES
+(3, NULL, 'PASS01', '홍길동', 
+'남자', '010-1234-5678', 'hong@kr.or.kr');
+-- ORA-01400: NULL을 ("KH_CMH"."USER_USED_PK2"."USER_ID") 안에 삽입할 수 없습니다
+
+--> 둘 중 하나라도 NULL 이면 위배!!!
+
+------------------------------------------------------------------
+
+
+
 
 
 
