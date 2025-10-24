@@ -543,6 +543,125 @@ INSERT INTO USER_USED_FK2 VALUES
 '남자', '010-2222-1111', 'ahn@kr.or.kr', NULL);
 
 
+COMMIT;
+
+SELECT * FROM USER_GRADE2;
+SELECT * FROM USER_USED_FK2;
+
+
+-- 부모테이블인 USER_GRADE2에서 GRADE_CODE = 10 삭제
+
+--
+DELETE FROM USER_GRADE2
+WHERE GRADE_CODE = 10;
+
+SELECT * FROM USER_GRADE2; -- 10 삭제됨
+SELECT * FROM USER_USED_FK2;
+-- 10 을 사용하고 있던 자식값이 NULL이 됨을 확인
+
+
+
+-- 3) ON DELETE CASCADE : 부모키 삭제시 자식키도 함께 삭제됨
+-- 부모키 삭제 시 값을 사용하고 있던 자식 테이블의 행이 삭제됨
+
+CREATE TABLE USER_GRADE3(
+	GRADE_CODE NUMBER PRIMARY KEY, -- 등급 고유식별 번호
+	GRADE_NAME VARCHAR2(30) NOT NULL -- 등급 명칭
+);
+
+INSERT INTO USER_GRADE3 VALUES(10, '일반회원');
+INSERT INTO USER_GRADE3 VALUES(20, '우수회원');
+INSERT INTO USER_GRADE3 VALUES(30, '특별회원');
+
+SELECT * FROM USER_GRADE3;
+
+
+CREATE TABLE USER_USED_FK3(
+	USER_NO NUMBER PRIMARY KEY, -- 사용자번호(고유한 번호 : 중복 X / NULL X)
+	USER_ID VARCHAR2(20) UNIQUE, -- 사용자 아이디(중복 X)
+	USER_PWD VARCHAR2(20) NOT NULL, -- 사용자 비밀번호(NULL X)
+	USER_NAME VARCHAR2(30),
+	GENDER VARCHAR2(10),
+	PHONE VARCHAR2(20),
+	EMAIL VARCHAR2(50), 
+	GRADE_CODE NUMBER CONSTRAINT 
+	GRADE_CODE_FK3 REFERENCES USER_GRADE3 ON DELETE CASCADE 
+										/* 삭제 옵션 */
+);
+
+
+INSERT INTO USER_USED_FK3 VALUES
+(1, 'USER01', 'PASS01', '홍길동', 
+'남자', '010-1234-5678', 'hong@kr.or.kr', 10);
+
+INSERT INTO USER_USED_FK3 VALUES
+(2, 'USER02', 'PASS02', '이순신', 
+'남자', '010-3333-4444', 'lee@kr.or.kr', 10);
+
+INSERT INTO USER_USED_FK3 VALUES
+(3, 'USER03', 'PASS03', '유관순', 
+'여자', '010-3333-1111', 'yoo@kr.or.kr', 30);
+
+INSERT INTO USER_USED_FK3 VALUES
+(4, 'USER04', 'PASS04', '안중근', 
+'남자', '010-2222-1111', 'ahn@kr.or.kr', NULL);
+
+COMMIT;
+
+SELECT * FROM USER_GRADE3;
+SELECT * FROM USER_USED_FK3;
+
+
+-- 부모테이블인 USER_GRADE3에서 GRADE_CODE = 10 삭제
+-- ON DELETE CASCADE 삭제옵션이 설정되어 있어서 오류 없이 삭제됨
+DELETE FROM USER_GRADE3
+WHERE GRADE_CODE = 10;
+
+
+SELECT * FROM USER_GRADE3; -- 10 삭제됨
+SELECT * FROM USER_USED_FK3; 
+-- 부모의 10을 참조하고있던 자식 행 삭제됨을 확인.
+
+
+----------------------------------------------------------------------
+
+-- 5. CHECK 제약조건 : 컬럼에 기록되는 값에 조건 설정을 할 수 있음
+-- CHECK (컬럼명 비교연산자 비교값)
+-- EX) GENDER -> CHECK(GENDER IN('남', '여'))
+
+CREATE TABLE USER_USED_CHECK(
+	USER_NO NUMBER PRIMARY KEY,
+	USER_ID VARCHAR2(20) UNIQUE,
+	USER_PWD VARCHAR2(20) NOT NULL,
+	USER_NAME VARCHAR2(30),
+	GENDER VARCHAR2(10) CONSTRAINT GENDER_CHECK CHECK(GENDER IN ('남', '여')),
+	PHONE VARCHAR2(20),
+	EMAIL VARCHAR2(50)
+	-- 테이블 레벨
+	-- , CONSTRAINT GENDER_CHECK CHECK(GENDER IN ('남', '여')),
+);
+
+
+INSERT INTO USER_USED_CHECK VALUES
+(1, 'USER01', 'PASS01', '홍길동', 
+'남자', '010-1234-5678', 'hong@kr.or.kr');
+-- ORA-02290: 체크 제약조건(KH_CMH.GENDER_CHECK)이 위배되었습니다
+
+
+INSERT INTO USER_USED_CHECK VALUES
+(1, 'USER01', 'PASS01', '홍길동', 
+'남', '010-1234-5678', 'hong@kr.or.kr');
+-- 가능
+
+INSERT INTO USER_USED_CHECK VALUES
+(2, 'USER02', 'PASS02', '유관순', 
+'여자', '010-1111-3333', 'yoo@kr.or.kr');
+-- ORA-02290: 체크 제약조건(KH_CMH.GENDER_CHECK)이 위배되었습니다
+
+INSERT INTO USER_USED_CHECK VALUES
+(2, 'USER02', 'PASS02', '유관순', 
+'여', '010-1111-3333', 'yoo@kr.or.kr');
+-- 가능 
 
 
 
